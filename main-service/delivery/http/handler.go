@@ -104,7 +104,7 @@ func (h *HTTPHandler) streamResults(c *fiber.Ctx) error {
 		fmt.Println("WRITER")
 		log.Printf("[SSE] Client connected for search_id=%s", prmSearchID)
 
-		ticker := time.NewTicker(10 * time.Second) // untuk heartbeat tiap 10 detik
+		ticker := time.NewTicker(2 * time.Second) // untuk heartbeat tiap 10 detik
 		defer ticker.Stop()
 
 		for { // listen Redis message dan mengirim setiap pesan baru ke frontend selama koneksi belum ditutup.
@@ -138,8 +138,22 @@ func (h *HTTPHandler) streamResults(c *fiber.Ctx) error {
 				}
 			case <-ticker.C:
 				// Heartbeat dengan ini, meskipun Redis tidak mengirim data baru, SSE client akan tetap hidup dan tahu bahwa koneksi masih aktif (via : ping).
-				fmt.Fprintf(w, ": ping\n\n") // ":" artinya comment di SSE (ignored by browser)
-				_ = w.Flush()
+				_, err := fmt.Fprintf(w, ": ping\n\n")
+				if err != nil {
+					log.Printf("[SSE] Ping write error: %v (search_id=%s)", err, prmSearchID)
+					cancel()
+					return
+				}
+
+				if err := w.Flush(); err != nil {
+					log.Printf("[SSE] Flush error during ping: %v (search_id=%s)", err, prmSearchID)
+					log.Printf("[SSE] Client disconnected for search_id=%s", prmSearchID)
+					cancel()
+					return
+				}
+
+				// fmt.Fprintf(w, ": ping\n\n") // ":" artinya comment di SSE (ignored by browser)
+				// _ = w.Flush()
 			}
 		}
 	}))

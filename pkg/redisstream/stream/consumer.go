@@ -50,7 +50,8 @@ func (c *consumer) SubscribeGroup(
 		select {
 		case <-ctx.Done():
 			log.Printf("[Redis] Stop consuming group %s for %s (context done)", group, expectedID)
-			c.cleanup(stream, group, consumerID, ctx)
+			c.deleteConsumer(stream, group, consumerID)
+			// c.cleanup(stream, group, consumerID)
 			// Cleanup: hapus consumer dari group
 			// if err := c.client.XGroupDelConsumer(ctx, stream, group, consumerID).Err(); err != nil {
 			// 	log.Printf("[Redis] Failed to delete consumer %s: %v", consumerID, err)
@@ -158,12 +159,20 @@ func (c *consumer) SubscribeGroup(
 // 	log.Println("Consumer shutdown triggered.")
 // }
 
-func (c *consumer) cleanup(stream, group, consumerID string, ctx context.Context) {
+func (c *consumer) deleteConsumer(stream, group, consumerID string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
 	if err := c.client.XGroupDelConsumer(ctx, stream, group, consumerID).Err(); err != nil {
 		log.Printf("[Redis] Failed to delete consumer %s: %v", consumerID, err)
 	} else {
 		log.Printf("[Redis] Consumer %s removed from group %s", consumerID, group)
 	}
+}
+
+func (c *consumer) destroyGroup(stream, group string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
 	if err := c.client.XGroupDestroy(ctx, stream, group).Err(); err != nil {
 		log.Printf("[Redis] Failed to destroy group %s: %v", group, err)
