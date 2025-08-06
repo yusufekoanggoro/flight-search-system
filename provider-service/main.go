@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gofiber/fiber"
+	"github.com/gofiber/fiber/v2"
 	"github.com/yusufekoanggoro/flight-search-system/main-service/app"
 	"github.com/yusufekoanggoro/flight-search-system/pkg/redisstream"
 	"github.com/yusufekoanggoro/flight-search-system/pkg/redisstream/stream"
