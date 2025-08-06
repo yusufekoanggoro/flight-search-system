@@ -1,0 +1,28 @@
+# Stage 1: build
+FROM golang:1.24.4-alpine AS builder
+
+WORKDIR /app
+
+# Copy module files
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy semua file project yang dibutuhkan untuk build
+COPY main-service ./main-service
+COPY pkg ./pkg
+
+# Ganti ke direktori service
+WORKDIR /app/main-service
+
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main
+
+# Stage 2: minimal runtime image
+FROM alpine:latest
+
+WORKDIR /app
+
+COPY --from=builder /app/main-service/main .
+
+EXPOSE 8080
+
+CMD ["./main"]
