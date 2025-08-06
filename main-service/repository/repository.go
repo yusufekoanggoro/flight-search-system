@@ -62,7 +62,7 @@ func (r *redisRepo) SubscribeToSearchResults(
 				log.Printf("[SSE] Context done before sending message %s", msg.ID)
 				return false, nil // tidak ACK
 			}
-		}, expectedID)
+		}, ">")
 		if err != nil {
 			log.Printf("[SSE] Error from consumer: %v", err)
 		}

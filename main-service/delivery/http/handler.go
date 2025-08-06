@@ -73,7 +73,8 @@ func (h *HTTPHandler) streamResults(c *fiber.Ctx) error {
 	ctx, cancel := context.WithCancel(c.Context())
 
 	stream := "flight.search.results"
-	group := fmt.Sprintf("main.service.%s", prmSearchID) // 1 Consumer Group per SearchID
+	group := "main.service"
+	// fmt.Sprintf("main.service.%s", prmSearchID) // 1 Consumer Group per SearchID
 	consumerID := "main.service"
 
 	// Subscribe ke Redis Stream duluan, sebelum buat stream writer

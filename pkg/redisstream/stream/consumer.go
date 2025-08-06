@@ -12,7 +12,7 @@ import (
 )
 
 type Consumer interface {
-	SubscribeGroup(ctx context.Context, stream, group, consumerID string, handler func(msg redis.XMessage, rawData string) (bool, error), expectedID string) error
+	SubscribeGroup(ctx context.Context, stream, group, consumerID string, handler func(msg redis.XMessage, rawData string) (bool, error), readOffset string) error
 }
 
 type consumer struct {
@@ -33,7 +33,7 @@ func (c *consumer) SubscribeGroup(
 	group,
 	consumerID string,
 	handler func(msg redis.XMessage, rawData string) (bool, error),
-	expectedID string,
+	readOffset string,
 ) error {
 	// Create group if not exists (MKSTREAM to create stream if belum ada)
 	err := c.client.XGroupCreateMkStream(context.Background(), stream, group, "$").Err()
@@ -49,7 +49,7 @@ func (c *consumer) SubscribeGroup(
 		// log.Println("[DEBUG] Redis loop running...")
 		select {
 		case <-ctx.Done():
-			log.Printf("[Redis] Stop consuming group %s for %s (context done)", group, expectedID)
+			log.Printf("[Redis] Stop consuming group %s (context done)", group)
 			c.deleteConsumer(stream, group, consumerID)
 			// c.cleanup(stream, group, consumerID)
 			// Cleanup: hapus consumer dari group
@@ -72,9 +72,9 @@ func (c *consumer) SubscribeGroup(
 		streams, err := c.client.XReadGroup(ctx, &redis.XReadGroupArgs{
 			Group:    group,
 			Consumer: consumerID,
-			Streams:  []string{stream, ">"}, // hanya ambil pesan baru (belum pernah dibaca dalam group).
-			Count:    10,                    // redis akan membaca maksimal 10 pesan dari stream
-			Block:    1 * time.Second,       // durasi maksimal client akan menunggu pesan baru jika belum ada pesan yang tersedia.
+			Streams:  []string{stream, readOffset}, // hanya ambil pesan baru (belum pernah dibaca dalam group).
+			Count:    10,                           // redis akan membaca maksimal 10 pesan dari stream
+			Block:    1 * time.Second,              // durasi maksimal client akan menunggu pesan baru jika belum ada pesan yang tersedia.
 		}).Result()
 
 		if err != nil && err != redis.Nil {
@@ -82,7 +82,7 @@ func (c *consumer) SubscribeGroup(
 
 			// Jika context sudah dicancel, keluar
 			if ctx.Err() != nil || errors.Is(err, context.Canceled) {
-				log.Printf("[Redis] Stop consuming group %s for %s (context canceled in error)", group, expectedID)
+				log.Printf("[Redis] Stop consuming group %s (context canceled in error)", group)
 				return nil
 			}
 
