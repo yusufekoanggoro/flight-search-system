@@ -1,27 +1,190 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Test SSE</title>
+  <title>Flight Search SSE</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f4f7f8;
+      color: #333;
+      padding: 40px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #2c3e50;
+    }
+
+    form {
+      max-width: 500px;
+      margin: 0 auto 30px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px 10px;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      margin-top: 15px;
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      background-color: #3498db;
+      color: white;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #2980b9;
+    }
+
+    #status {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    #log {
+      max-width: 500px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    #results {
+      max-width: 500px;
+      margin: 20px auto 0 auto;
+    }
+
+    .result-card {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+  </style>
 </head>
 <body>
-  <h1>Listening to SSE...</h1>
+  <h1>Flight Search SSE</h1>
+
+  <form id="searchForm">
+    <label>From:
+      <input type="text" name="from" placeholder="CGK" required>
+    </label>
+    <label>To:
+      <input type="text" name="to" placeholder="DPS" required>
+    </label>
+    <label>Date:
+      <input type="date" name="date" required>
+    </label>
+    <label>Passengers:
+      <input type="number" name="passengers" min="1" value="1" required>
+    </label>
+    <button type="submit">Submit Search</button>
+  </form>
+
+  <div id="status"></div>
   <div id="log"></div>
+  <div id="results"></div>
 
   <script>
     const log = document.getElementById("log");
-    const es = new EventSource("http://localhost:3000/api/flights/search/93ab53ba-b44b-4733-918d-f277dd6ecf5d/stream");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+    const form = document.getElementById("searchForm");
 
-    es.onmessage = function(event) {
-      const p = document.createElement("p");
-      p.textContent = "Received: " + event.data;
-      log.appendChild(p);
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+      const payload = {
+        from: formData.get("from"),
+        to: formData.get("to"),
+        date: formData.get("date"),
+        passengers: parseInt(formData.get("passengers"), 10)
+      };
+
+      // clear previous
+      log.innerHTML = "";
+      resultsEl.innerHTML = "";
+      statusEl.textContent = "Submitting search...";
+
+      // submit search request
+      const response = await fetch("http://localhost:3000/api/flights/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        const searchId = result.data.search_id;
+        statusEl.textContent = "Search status: " + result.data.status;
+        logMessage("Search submitted, search_id: " + searchId);
+
+        subscribeSSE(searchId);
+      } else {
+        logMessage("Search failed: " + result.message);
+      }
     };
 
-    es.onerror = function(e) {
+    function subscribeSSE(searchId) {
+      const es = new EventSource(`http://localhost:3000/api/flights/search/${searchId}/stream`);
+
+      es.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        logMessage("Update: " + JSON.stringify(data));
+        statusEl.textContent = "Search status: " + data.data.status;
+
+        if (data.status === "completed") {
+          renderResults(data.results);
+          es.close();
+        }
+      };
+
+      es.onerror = function(e) {
+        logMessage("Error connecting to SSE");
+        es.close();
+      };
+    }
+
+    function logMessage(msg) {
       const p = document.createElement("p");
-      p.textContent = "Error connecting to SSE";
+      p.textContent = msg;
       log.appendChild(p);
-    };
+      log.scrollTop = log.scrollHeight;
+    }
+
+    function renderResults(results) {
+      resultsEl.innerHTML = "";
+      results.forEach(r => {
+        const div = document.createElement("div");
+        div.className = "result-card";
+        div.textContent = JSON.stringify(r, null, 2);
+        resultsEl.appendChild(div);
+      });
+    }
   </script>
 </body>
 </html>
