@@ -38,7 +38,7 @@ func (h *RedisHandler) searchResult(key, value []byte) error {
 		data := sse.SSEMessage{
 			Event:    "search result",
 			SearchID: resp.SearchID,
-			Data:     []byte("asd"),
+			Data:     resp,
 		}
 		h.hub.SendToOne(&data)
 	}
