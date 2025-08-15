@@ -27,4 +27,5 @@ type ConsumerGroup interface {
 
 type Client interface {
 	Add(ctx context.Context, stream string, values interface{}) error
+	Ack(ctx context.Context, stream, group, messageID string) error
 }

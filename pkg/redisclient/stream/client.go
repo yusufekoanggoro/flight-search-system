@@ -40,3 +40,19 @@ func (c *client) Add(ctx context.Context, stream string, values interface{}) err
 	log.Printf("add to stream %s with id %s", stream, id)
 	return nil
 }
+
+func (c *client) Ack(ctx context.Context, stream, group, messageID string) error {
+	n, err := c.client.XAck(ctx, stream, group, messageID).Result()
+	if err != nil {
+		log.Printf("failed to ack message %s in stream %s: %v", messageID, stream, err)
+		return fmt.Errorf("failed to ack message %s: %w", messageID, err)
+	}
+
+	if n == 0 {
+		log.Printf("warning: message %s was not acknowledged (maybe already acked or doesn't exist)", messageID)
+	} else {
+		log.Printf("acknowledged message %s in stream %s", messageID, stream)
+	}
+
+	return nil
+}
