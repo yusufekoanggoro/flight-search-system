@@ -8,11 +8,11 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 # Copy semua file project yang dibutuhkan untuk build
-COPY main-service ./main-service
+COPY provider-service ./provider-service
 COPY pkg ./pkg
 
 # Ganti ke direktori service
-WORKDIR /app/main-service
+WORKDIR /app/provider-service
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o main
 
@@ -21,7 +21,7 @@ FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/main-service/main .
+COPY --from=builder /app/provider-service/main .
 
 EXPOSE 3000
 

@@ -34,13 +34,15 @@ func (h *RedisHandler) searchResult(key, value []byte) error {
 	var resp domain.FlightSearchResult
 	if err := json.Unmarshal([]byte(temp["data"]), &resp); err != nil {
 		log.Println(err)
-	} else {
-		data := sse.SSEMessage{
-			Event:    "search result",
-			SearchID: resp.SearchID,
-			Data:     resp,
-		}
-		h.hub.SendToOne(&data)
+		return err
 	}
+
+	data := sse.SSEMessage{
+		Event:    "search result",
+		SearchID: resp.SearchID,
+		Data:     resp,
+	}
+	h.hub.SendToOne(&data)
+
 	return nil
 }

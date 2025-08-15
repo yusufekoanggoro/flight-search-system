@@ -30,7 +30,7 @@ func main() {
 	}()
 
 	redisConfig := &redisclient.Config{
-		Addr:     "redis:6379",
+		Addr:     "localhost:6379",
 		Password: "",
 		DB:       0,
 	}
@@ -63,7 +63,7 @@ func main() {
 	fiberApp := fiber.New()
 	fiberApp.Use(cors.New(cors.Config{
 		AllowOrigins: "*",
-		AllowHeaders: "Cache-Control",
+		AllowHeaders: "Cache-Control, Content-Type",
 	}))
 	group := fiberApp.Group("/api/flights")
 
@@ -97,7 +97,10 @@ func main() {
 	<-ctx.Done()
 	log.Println("Context canceled, shutting down services...")
 
-	fiberApp.Shutdown()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	fiberApp.ShutdownWithContext(ctx)
 	hub.Close()
 	rdb.Close()
 

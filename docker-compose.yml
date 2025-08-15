@@ -10,8 +10,6 @@ services:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
     restart: unless-stopped # Container akan otomatis restart kecuali dihentikan manual
-    networks:
-      - flight-net
 
   redis-insight:
     image: redislabs/redisinsight:1.14.0
@@ -19,8 +17,6 @@ services:
     ports:
       - "8001:8001"
     restart: unless-stopped
-    networks:
-      - flight-net
 
   main-service:
     build:
@@ -28,12 +24,19 @@ services:
       dockerfile:  Dockerfile.main
     container_name: main-service
     ports:
-      - "3000:3000" # Sesuaikan dengan port aplikasi kamu
+      - "3000:3000" # host 3000 -> container 3000
     depends_on:
       - redis
     restart: unless-stopped
-    networks:
-    - flight-net
+
+  provider-service:
+    build:
+      context: .
+      dockerfile:  Dockerfile.provider
+    container_name: provider-service
+    depends_on:
+      - redis
+    restart: unless-stopped
 
 volumes:
   redis_data:
