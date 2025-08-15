@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped # Container akan otomatis restart kecuali dihentikan manual
+    networks:
+      - flight-net
+
+  redis-insight:
+    image: redislabs/redisinsight:1.14.0
+    container_name: redis-insight
+    ports:
+      - "8001:8001"
+    restart: unless-stopped
+    networks:
+      - flight-net
+
+  main-service:
+    build:
+      context: .
+      dockerfile:  Dockerfile.main
+    container_name: main-service
+    ports:
+      - "3000:3000" # Sesuaikan dengan port aplikasi kamu
+    depends_on:
+      - redis
+    restart: unless-stopped
+    networks:
+    - flight-net
+
+volumes:
+  redis_data:
+
+networks:
+  flight-net:
+    driver: bridge

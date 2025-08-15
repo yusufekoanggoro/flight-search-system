@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test SSE</title>
+</head>
+<body>
+  <h1>Listening to SSE...</h1>
+  <div id="log"></div>
+
+  <script>
+    const log = document.getElementById("log");
+    const es = new EventSource("http://localhost:3000/api/flights/search/93ab53ba-b44b-4733-918d-f277dd6ecf5d/stream");
+
+    es.onmessage = function(event) {
+      const p = document.createElement("p");
+      p.textContent = "Received: " + event.data;
+      log.appendChild(p);
+    };
+
+    es.onerror = function(e) {
+      const p = document.createElement("p");
+      p.textContent = "Error connecting to SSE";
+      log.appendChild(p);
+    };
+  </script>
+</body>
+</html>
