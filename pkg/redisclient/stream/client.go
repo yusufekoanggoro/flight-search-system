@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -18,11 +19,19 @@ func NewClient(rdb redis.UniversalClient) Client {
 	}
 }
 
-func (c *client) Add(ctx context.Context, stream string, values map[string]interface{}) error {
+func (c *client) Add(ctx context.Context, stream string, values interface{}) error {
+	data, err := json.Marshal(values)
+	if err != nil {
+		return fmt.Errorf("failed to marshal payload: %w", err)
+	}
+
 	args := &redis.XAddArgs{
 		Stream: stream,
-		Values: values,
+		Values: map[string]interface{}{
+			"data": string(data),
+		},
 	}
+
 	id, err := c.client.XAdd(ctx, args).Result()
 	if err != nil {
 		log.Printf("failed to add to stream %s: %v", stream, err)

@@ -26,5 +26,5 @@ type ConsumerGroup interface {
 }
 
 type Client interface {
-	Add(ctx context.Context, stream string, values map[string]interface{}) error
+	Add(ctx context.Context, stream string, values interface{}) error
 }
